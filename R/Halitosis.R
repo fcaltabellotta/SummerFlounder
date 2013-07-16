@@ -3,6 +3,7 @@
 # Written by Steve Martell,  IPHC
 # Date: Jan 8, 2012
 # DATE: November 5,  2012.  Re-organization of the code
+# MODIFIED: July 16, 2013 for use in Summer Flounder Reference Points Calculations
 # CODE ORGANIZATIONn
 # 	Dependencies.
 #   Read in external results from growth parameter estimatation,  selectivities.
@@ -27,7 +28,7 @@
 # 5) Bycatch fishing mortality rates from 0.02 to 0.153
 # 6) Size-specific natural mortality rates.
 # -------------------------------------------------------------------------- ##
-  setwd("/Users/stevenmartell1/Documents/IPHC/SizeLimitz/Halitosis/")
+  setwd("/Users/stevenmartell1/Documents/CONSULTING/SummerFlounder/R/")
 # |---------------------------------------------------------------------------|
 # | Libraries
 # |---------------------------------------------------------------------------| 
@@ -38,14 +39,14 @@
    require(grid)            #arrow function
    source("GvonBGrowth.R")  #gvonb function
    source("Selex.R")		#calcPage function
-   source("IPHC_theme.R")
+   #source("IPHC_theme.R")
 
 
 # |---------------------------------------------------------------------------|
 # | Data and other constants
 # |---------------------------------------------------------------------------|
-   regArea <- "2B"
-   A	<- 35					# maximum age.
+   regArea <- "Summer Flounder"
+   A	<- 21					# maximum age.
    G	<- 11					# number of growth groups
    S	<- 2					# number of sexes
    dim	<- c(A, G, S)			# array dimensions
@@ -57,14 +58,17 @@
 # |---------------------------------------------------------------------------|
 # | Growth parameter estimates from vonBH
 # |---------------------------------------------------------------------------|
-   GM  <- read.rep("../src/VONB/vonbh.rep")
-   RA  <- c("2A","2B","2C","3A","3B","4A","4B","4C","4D")
-   HR  <- c(rep(0.215, 4), rep(0.161, 5))
+   # GM  <- read.rep("../src/VONB/vonbh.rep")
+   GM  <- list(linf=matrix(c(78.49,65.25),nrow=2),vbk=matrix(c(0.22,0.23),nrow=2),
+               to=matrix(c(-1.12,-1.5)+1,nrow=2),p=matrix(c(1,1),nrow=2),
+               cv=matrix(c(0.1,0.1),nrow=2))
+   RA  <- c("Summer Flounder")#c("2A","2B","2C","3A","3B","4A","4B","4C","4D")
+   HR  <- 0.2 #c(rep(0.215, 4), rep(0.161, 5))
    
 # |---------------------------------------------------------------------------|
 # | Commercial selectivities from Stewart 2012.                               
 # |---------------------------------------------------------------------------|
-   bin   <- seq(60, 130, by=10)
+   bin   <- seq(10, 100, by=10)
    CSelL <- matrix(
    (data=c(0,  0.0252252,  0.250685,  0.617268,  1,  1.36809,  1.74292,  2.12022, 
    		0,  0.0151914,  0.144236,  0.513552,  1,  1.48663,  1.97208,  2.45702)
@@ -81,7 +85,7 @@
    #CSelL <- t(t(SSelL)/apply(SSelL,2,max))
    CSelL <- CSelL/max(CSelL)
    CSelL <- SSelL/max(SSelL)
-   slim	<- 81.28
+   slim	<- 33.0
    ulim	<- 1500
    cvlm	<- 0.1
    
@@ -93,7 +97,7 @@
 # |---------------------------------------------------------------------------|
    bo		<- 100.0			# unfished female spawning biomass
    h		<- 0.95				# steepness
-   dm		<- 0.16				# discard mortality rate
+   dm		<- 0.10				# discard mortality rate
    cm		<- 0				# Size-dependent natural mortality rate (-0.5, 0.5)
      
 
@@ -103,11 +107,12 @@
 # |
 .getRegPars <- function(regArea, THETA=THETA, PI=PI)
 {
+	# browser()
 	# Sex specific parameters (female, male).
-	m		<- c(0.15, 0.1439)			# natural mortality rate
+	m		<- c(0.2, 0.3)  			# natural mortality rate
 	#0.15 0.135474
-	a50		<- rep(10.91, 2)			# age at 50% maturity
-	k50		<- rep(1.406, 2)			# std at 50% maturity
+	a50		<- rep(1.5, 2)			# age at 50% maturity
+	k50		<- rep(0.25, 2)			# std at 50% maturity
 	a		<- rep(6.821e-6, 2)			# length-weight allometry (Clark 1992)
 	b		<- rep(3.24, 2)				# length-weight allometry (CLark 1992)
 	
@@ -223,7 +228,8 @@
 		std	<- cvlm*slim+1.e-30	
 		for(i in 1:S)
 		{
-			pl       <- approx(bin, CSelL[,i], xl, yright=1, yleft=0)$y
+			# pl       <- approx(bin, CSelL[,i], xl, yright=1, yleft=0)$y
+			pl       <- plogis(xl,30,5)
 			sc[,,i]  <- .calcPage(la[,,i],sd_la[,,i],pl,xl)
 			#sc[,,i]  <- approx(bin, CSelL[,i], la[,,i], yleft=0, yright=1)$y
 			
@@ -413,9 +419,10 @@
 # |
 .makeDataFrame <- function(RegArea)
 {
-	
+	cat(".makeDataFrame\n")
 	n  <- length(RegArea)
 	df <- data.frame()
+	print(n)
 	for(i in 1:n)
 	{
 		# | Find Fspr = 0.3
@@ -442,7 +449,7 @@
 		cat( "\t", "Fspr30", "\t", "Umsy\n")
 		cat( "\t", u2, "\t", u3, "\n")
 		
-		
+		print(RegArea[[i]])
 		tmp <- data.frame(Area  = RegArea[[i]]$RA, 
 						Fspr.30 = fspr.30,
 						F0.1    = f0.1,  
@@ -482,121 +489,121 @@
 	DF      <- .makeDataFrame(RegArea)
 	
 	
-	slim    <- 81.3
-	ulim    <- 140
-	#cm      <- 0.5
-	#dm      <- 0
-	#bin     <- seq(50, 120, by=10)
-	RegArea <- lapply(RA, .getRegPars)
-	RegArea <- lapply(RegArea, .calcLifeTable)
-	RegArea <- lapply(RegArea, .calcSelectivities)
-	RegArea <- lapply(RegArea, .calcSRR)
-	RegArea <- lapply(RegArea, .calcEquilibrium, Scenario=2)
-	#RegArea <- lapply(RegArea, .asem, fe=0)
-	DF2      <- .makeDataFrame(RegArea)
+	# slim    <- 81.3
+	# ulim    <- 140
+	# #cm      <- 0.5
+	# #dm      <- 0
+	# #bin     <- seq(50, 120, by=10)
+	# RegArea <- lapply(RA, .getRegPars)
+	# RegArea <- lapply(RegArea, .calcLifeTable)
+	# RegArea <- lapply(RegArea, .calcSelectivities)
+	# RegArea <- lapply(RegArea, .calcSRR)
+	# RegArea <- lapply(RegArea, .calcEquilibrium, Scenario=2)
+	# #RegArea <- lapply(RegArea, .asem, fe=0)
+	# DF2      <- .makeDataFrame(RegArea)
 	
-	slim    <- 0
-	ulim    <- 1500
-	#cm      <- -0.5
-	#dm      <- 1.0
-	#bin     <- seq(70, 140, by=10)
-	RegArea <- lapply(RA, .getRegPars)
-	RegArea <- lapply(RegArea, .calcLifeTable)
-	RegArea <- lapply(RegArea, .calcSelectivities)
-	RegArea <- lapply(RegArea, .calcSRR)
-	RegArea <- lapply(RegArea, .calcEquilibrium, Scenario=3)
-	#RegArea <- lapply(RegArea, .asem, fe=0)
-	DF3      <- .makeDataFrame(RegArea)
+	# slim    <- 0
+	# ulim    <- 1500
+	# #cm      <- -0.5
+	# #dm      <- 1.0
+	# #bin     <- seq(70, 140, by=10)
+	# RegArea <- lapply(RA, .getRegPars)
+	# RegArea <- lapply(RegArea, .calcLifeTable)
+	# RegArea <- lapply(RegArea, .calcSelectivities)
+	# RegArea <- lapply(RegArea, .calcSRR)
+	# RegArea <- lapply(RegArea, .calcEquilibrium, Scenario=3)
+	# #RegArea <- lapply(RegArea, .asem, fe=0)
+	# DF3      <- .makeDataFrame(RegArea)
 	
-	h       <- 0.75
-	slim    <- 81.3
-	ulim    <- 15000
-	cm      <- 0
-	dm      <- 0.16
-	bin     <- seq(50, 120, by=10)
-	RegArea <- lapply(RA, .getRegPars)
-	RegArea <- lapply(RegArea, .calcLifeTable)
-	RegArea <- lapply(RegArea, .calcSelectivities)
-	RegArea <- lapply(RegArea, .calcSRR)
-	RegArea <- lapply(RegArea, .calcEquilibrium, Scenario=4)
-	#RegArea <- lapply(RegArea, .asem, fe=0)
-	DF4      <- .makeDataFrame(RegArea)
+	# h       <- 0.75
+	# slim    <- 81.3
+	# ulim    <- 15000
+	# cm      <- 0
+	# dm      <- 0.16
+	# bin     <- seq(50, 120, by=10)
+	# RegArea <- lapply(RA, .getRegPars)
+	# RegArea <- lapply(RegArea, .calcLifeTable)
+	# RegArea <- lapply(RegArea, .calcSelectivities)
+	# RegArea <- lapply(RegArea, .calcSRR)
+	# RegArea <- lapply(RegArea, .calcEquilibrium, Scenario=4)
+	# #RegArea <- lapply(RegArea, .asem, fe=0)
+	# DF4      <- .makeDataFrame(RegArea)
 	
-	#CSelL <- t(t(SSelL)/apply(SSelL,2,max))
-	#slim    <- 60
-	#ulim    <- 140
-	#cm      <- -0.5
-	#dm      <- 1.0
-	#bin     <- seq(70, 140, by=10)
-	RegArea <- lapply(RA, .getRegPars)
-	RegArea <- lapply(RegArea, .calcLifeTable)
-	RegArea <- lapply(RegArea, .calcSelectivities)
-	RegArea <- lapply(RegArea, .calcSRR)
-	RegArea <- lapply(RegArea, .calcEquilibrium, Scenario=5, bycatch=2)
-	#RegArea <- lapply(RegArea, .asem, fe=0)
-	DF5      <- .makeDataFrame(RegArea)
+	# #CSelL <- t(t(SSelL)/apply(SSelL,2,max))
+	# #slim    <- 60
+	# #ulim    <- 140
+	# #cm      <- -0.5
+	# #dm      <- 1.0
+	# #bin     <- seq(70, 140, by=10)
+	# RegArea <- lapply(RA, .getRegPars)
+	# RegArea <- lapply(RegArea, .calcLifeTable)
+	# RegArea <- lapply(RegArea, .calcSelectivities)
+	# RegArea <- lapply(RegArea, .calcSRR)
+	# RegArea <- lapply(RegArea, .calcEquilibrium, Scenario=5, bycatch=2)
+	# #RegArea <- lapply(RegArea, .asem, fe=0)
+	# DF5      <- .makeDataFrame(RegArea)
 	
-	#CSelL <- t(t(SSelL)/apply(SSelL,2,max))
-	#slim    <- 60
-	#ulim    <- 140
-	cm      <- -0.5
-	#dm      <- 1.0
-	#bin     <- seq(70, 140, by=10)
-	RegArea <- lapply(RA, .getRegPars)
-	RegArea <- lapply(RegArea, .calcLifeTable)
-	RegArea <- lapply(RegArea, .calcSelectivities)
-	RegArea <- lapply(RegArea, .calcSRR)
-	RegArea <- lapply(RegArea, .calcEquilibrium, Scenario=6, bycatch=0)
-	#RegArea <- lapply(RegArea, .asem, fe=0)
-	DF6      <- .makeDataFrame(RegArea)
+	# #CSelL <- t(t(SSelL)/apply(SSelL,2,max))
+	# #slim    <- 60
+	# #ulim    <- 140
+	# cm      <- -0.5
+	# #dm      <- 1.0
+	# #bin     <- seq(70, 140, by=10)
+	# RegArea <- lapply(RA, .getRegPars)
+	# RegArea <- lapply(RegArea, .calcLifeTable)
+	# RegArea <- lapply(RegArea, .calcSelectivities)
+	# RegArea <- lapply(RegArea, .calcSRR)
+	# RegArea <- lapply(RegArea, .calcEquilibrium, Scenario=6, bycatch=0)
+	# #RegArea <- lapply(RegArea, .asem, fe=0)
+	# DF6      <- .makeDataFrame(RegArea)
 	
-	#CSelL <- t(t(SSelL)/apply(SSelL,2,max))
-	#slim    <- 60
-	#ulim    <- 140
-	cm      <-  0.5
-	#dm      <- 1.0
-	#bin     <- seq(70, 140, by=10)
-	RegArea <- lapply(RA, .getRegPars)
-	RegArea <- lapply(RegArea, .calcLifeTable)
-	RegArea <- lapply(RegArea, .calcSelectivities)
-	RegArea <- lapply(RegArea, .calcSRR)
-	RegArea <- lapply(RegArea, .calcEquilibrium, Scenario=7, bycatch=0)
-	#RegArea <- lapply(RegArea, .asem, fe=0)
-	DF7      <- .makeDataFrame(RegArea)
-	
-	
-	#CSelL <- t(t(SSelL)/apply(SSelL,2,max))
-	#slim    <- 60
-	#ulim    <- 140
-	cm      <- 0
-	h       <- 0.85
-	#dm      <- 1.0
-	#bin     <- seq(70, 140, by=10)
-	RegArea <- lapply(RA, .getRegPars)
-	RegArea <- lapply(RegArea, .calcLifeTable)
-	RegArea <- lapply(RegArea, .calcSelectivities)
-	RegArea <- lapply(RegArea, .calcSRR)
-	RegArea <- lapply(RegArea, .calcEquilibrium, Scenario=8, bycatch=0)
-	#RegArea <- lapply(RegArea, .asem, fe=0)
-	DF8      <- .makeDataFrame(RegArea)
-	
-	#CSelL <- t(t(SSelL)/apply(SSelL,2,max))
-	#slim    <- 60
-	#ulim    <- 140
-	cm      <- 0
-	h       <- 0.65
-	#dm      <- 1.0
-	#bin     <- seq(70, 140, by=10)
-	RegArea <- lapply(RA, .getRegPars)
-	RegArea <- lapply(RegArea, .calcLifeTable)
-	RegArea <- lapply(RegArea, .calcSelectivities)
-	RegArea <- lapply(RegArea, .calcSRR)
-	RegArea <- lapply(RegArea, .calcEquilibrium, Scenario=9, bycatch=0)
-	#RegArea <- lapply(RegArea, .asem, fe=0)
-	DF9      <- .makeDataFrame(RegArea)
+	# #CSelL <- t(t(SSelL)/apply(SSelL,2,max))
+	# #slim    <- 60
+	# #ulim    <- 140
+	# cm      <-  0.5
+	# #dm      <- 1.0
+	# #bin     <- seq(70, 140, by=10)
+	# RegArea <- lapply(RA, .getRegPars)
+	# RegArea <- lapply(RegArea, .calcLifeTable)
+	# RegArea <- lapply(RegArea, .calcSelectivities)
+	# RegArea <- lapply(RegArea, .calcSRR)
+	# RegArea <- lapply(RegArea, .calcEquilibrium, Scenario=7, bycatch=0)
+	# #RegArea <- lapply(RegArea, .asem, fe=0)
+	# DF7      <- .makeDataFrame(RegArea)
 	
 	
-	DF      <- rbind(DF, DF2, DF3, DF4, DF5, DF6, DF7, DF8, DF9)
+	# #CSelL <- t(t(SSelL)/apply(SSelL,2,max))
+	# #slim    <- 60
+	# #ulim    <- 140
+	# cm      <- 0
+	# h       <- 0.85
+	# #dm      <- 1.0
+	# #bin     <- seq(70, 140, by=10)
+	# RegArea <- lapply(RA, .getRegPars)
+	# RegArea <- lapply(RegArea, .calcLifeTable)
+	# RegArea <- lapply(RegArea, .calcSelectivities)
+	# RegArea <- lapply(RegArea, .calcSRR)
+	# RegArea <- lapply(RegArea, .calcEquilibrium, Scenario=8, bycatch=0)
+	# #RegArea <- lapply(RegArea, .asem, fe=0)
+	# DF8      <- .makeDataFrame(RegArea)
+	
+	# #CSelL <- t(t(SSelL)/apply(SSelL,2,max))
+	# #slim    <- 60
+	# #ulim    <- 140
+	# cm      <- 0
+	# h       <- 0.65
+	# #dm      <- 1.0
+	# #bin     <- seq(70, 140, by=10)
+	# RegArea <- lapply(RA, .getRegPars)
+	# RegArea <- lapply(RegArea, .calcLifeTable)
+	# RegArea <- lapply(RegArea, .calcSelectivities)
+	# RegArea <- lapply(RegArea, .calcSRR)
+	# RegArea <- lapply(RegArea, .calcEquilibrium, Scenario=9, bycatch=0)
+	# #RegArea <- lapply(RegArea, .asem, fe=0)
+	# DF9      <- .makeDataFrame(RegArea)
+	
+	
+	# DF      <- rbind(DF, DF2, DF3, DF4, DF5, DF6, DF7, DF8, DF9)
 	
 # |
 # |---------------------------------------------------------------------------|
@@ -703,8 +710,8 @@ p.de  <- ggplot(sDF) + geom_line(aes(x=fe, y=de/ye*100, shape=factor(Scenario), 
 p.de  <- p.de + geom_point(data=pDF, aes(x=fe, y=de/ye*100, shape=factor(Scenario)))
 p.de  <- p.de + labs(x="Fishing mortality rate", y="Percent wastage (dead discards/landed catch)", shape="Scenario", linetype="Scenario")
 p.de  <- p.de + facet_wrap(~Area) + theme_bw(12)
-ggsave(p.de, file="../FIGS/fig:PercentWastage.pdf")
-ggsave(p.de, file="../FIGS/fig:PercentWastage.png")
+# ggsave(p.de, file="../FIGS/fig:PercentWastage.pdf")
+# ggsave(p.de, file="../FIGS/fig:PercentWastage.png")
 
 
 # |---------------------------------------------------------------------------|
@@ -757,8 +764,8 @@ p.ye <- p.ye + scale_shape_manual(values=c(1:9))
 p.ye <- p.ye + labs(x="Fishing mortality rate", y="Relative yield")
 p.ye <- p.ye + geom_segment(aes(x=Fmsy, y=msy, xend=Fmsy, yend=0, col=Area), arrow=arrow(length=unit(.2, "cm")), size=0.25, linetype=1)
 p.ye1a<-p.ye
-ggsave(p.ye1, file="../FIGS/fig:YeBase.pdf")
-ggsave(p.ye1, file="../FIGS/fig:YeBase.png")
+# ggsave(p.ye1, file="../FIGS/fig:YeBase.pdf")
+# ggsave(p.ye1, file="../FIGS/fig:YeBase.png")
 
 
 sDF  <- subset(DF, Scenario==2)
@@ -825,8 +832,8 @@ p.ye <- p.ye + scale_shape_manual(values=c(1:9))
 p.ye <- p.ye + labs(x="Fishing mortality rate", y="Relative yield")
 p.ye <- p.ye + geom_segment(aes(x=Fmsy, y=msy, xend=Fmsy, yend=0, shape=Area), arrow=arrow(length=unit(.2, "cm")), size=0.25, linetype=1)
 p.yeAll <- p.ye + facet_wrap(~Scenario) + theme_bw(12)
-ggsave(p.yeAll, file="../FIGS/fig:YeALL.pdf")
-ggsave(p.yeAll, file="../FIGS/fig:YeALL.png")
+# ggsave(p.yeAll, file="../FIGS/fig:YeALL.pdf")
+# ggsave(p.yeAll, file="../FIGS/fig:YeALL.png")
 
 
 #p.ye <- p.ye + geom_vline(xintercept=-log(1-c(0.161, 0.215)), size=0.2,  col=c(1, 2) )
@@ -856,8 +863,8 @@ ggsave(p.yeAll, file="../FIGS/fig:YeALL.png")
    p.wbar_f <- p.wbar_f + labs(x="Fishing mortality rate", y="Mean weight-at-age (lb)")
    p.wbar_f <- p.wbar_f + labs(linetype="Age")
    p.wbar_f <- p.wbar_f + facet_wrap(~Area) + theme_bw(12)
-   ggsave(p.wbar_f, file="../FIGS/fig:wbar_female.pdf")
-   ggsave(p.wbar_f, file="../FIGS/fig:wbar_female.png")
+   # ggsave(p.wbar_f, file="../FIGS/fig:wbar_female.pdf")
+   # ggsave(p.wbar_f, file="../FIGS/fig:wbar_female.png")
 
 
 # |---------------------------------------------------------------------------|
