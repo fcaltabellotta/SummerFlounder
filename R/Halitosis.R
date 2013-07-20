@@ -63,7 +63,7 @@
                to=matrix(c(-1.12,-1.5)+1,nrow=2),p=matrix(c(1,1),nrow=2),
                cv=matrix(c(0.1,0.1),nrow=2))
    RA  <- c("Summer Flounder")#c("2A","2B","2C","3A","3B","4A","4B","4C","4D")
-   HR  <- 0.2 #c(rep(0.215, 4), rep(0.161, 5))
+   HR  <- 0.309 #c(rep(0.215, 4), rep(0.161, 5))
    
 # |---------------------------------------------------------------------------|
 # | Commercial selectivities from Stewart 2012.                               
@@ -111,8 +111,8 @@
 	# Sex specific parameters (female, male).
 	m		<- c(0.2, 0.3)  			# natural mortality rate
 	#0.15 0.135474
-	a50		<- rep(1.5, 2)			# age at 50% maturity
-	k50		<- rep(0.25, 2)			# std at 50% maturity
+	a50		<- rep(1.5, 2)				# age at 50% maturity
+	k50		<- rep(0.25, 2)				# std at 50% maturity
 	a		<- rep(6.821e-6, 2)			# length-weight allometry (Clark 1992)
 	b		<- rep(3.24, 2)				# length-weight allometry (CLark 1992)
 	
