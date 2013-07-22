@@ -2,6 +2,19 @@
 # Steve Martell
 # July 20, 2013
 
+# GROWTH PARS
+# Current assessment
+
+# 38,173
+
+# 12,14
+# male female both
+# linf
+# 73.5, 80.9, 87.2
+# k
+# 0.14, 0.18, 0.14
+
+
 # |----------------------------------------------------------------------------------|
 # | LIBRARIES
 # |----------------------------------------------------------------------------------|
@@ -23,14 +36,14 @@ pg   <- dnorm(seq(-1.96,1.96,length=G),0,1)
 pg   <- pg/sum(pg)
 
 Theta<- list(
-RA   = "Sex-specific",
+RA   = "Two Sex",
 age  = age ,
 pg   = pg,
 dim  = dim,
 S    = S,
 linf = c(78.48,65.25),   
 vbk  = c(0.22,0.23),     
-to   = c(-1.12,-1.15),
+to   = c(-1.12,-1.50),
 cvla = rep(0.1,S),
 a    = rep(1e-6,S),
 b    = rep(3,S),
@@ -38,10 +51,10 @@ a50  = rep(1.5,S),
 g50  = rep(0.25,S),
 m    = c(0.2,0.3),
 bo   = 100,
-h    = 0.85
+h    = 0.80
 )
 
-S <- 1
+S <- 2
 dim  <- c(length(age),G,S)
 T1<- list(
 RA   = "Single Sex",
@@ -49,17 +62,17 @@ age  = age ,
 pg   = pg,
 S    = S,
 dim  = dim,
-linf = mean(c(78.48,65.25)),   
-vbk  = mean(c(0.22,0.23)),     
-to   = mean(c(-1.12,-1.15)),
+linf = rep(mean(c(78.48,65.25)),2),   
+vbk  = rep(mean(c(0.22,0.23)),2),     
+to   = rep(mean(c(-1.12,-1.50)),2),
 cvla = rep(0.1,S),
 a    = rep(1e-6,S),
 b    = rep(3,S),
 a50  = rep(1.5,S),
 g50  = rep(0.25,S),
-m    = c(0.2,0.3),
+m    = c(0.25,0.25),
 bo   = 100,
-h    = 0.85
+h    = 0.80
 )
 # |----------------------------------------------------------------------------------|
 # | MANAGEMENT VARIABLES
@@ -148,7 +161,7 @@ cvlm <- 0.1
 		for( i in 1:S )
 		{
 			# probability of capturing a fish of length l
-			pl      <- plogis(xl,30,5)  
+			pl      <- plogis(xl,30,6.5)  
 
 			# probability of capturing a fish of age a given l
 			sc[,,i] <- .calcPage(la[,,i],sd_la[,,i],pl,xl)
@@ -378,8 +391,8 @@ cvlm <- 0.1
 		u2 <- round(1-exp(-fspr.30), 3)
 		u3 <- round(1-exp(-fmsy), 3)
 		if(i==1)
-		# cat( "\t", "Fspr30", "\t", "Umsy\n")
-		# cat( "\t", u2, "\t", u3, "\n")
+		cat( "\t", "Fspr30", "\t", "Umsy\n")
+		cat( "\t", u2, "\t", u3, "\n")
 		
 		# print(Theta)
 		tmp <- data.frame(Stock  = Theta$RA, 
@@ -398,12 +411,22 @@ cvlm <- 0.1
 # | MAIN
 # |----------------------------------------------------------------------------------|
 # |
-#Theta = T1
+# Theta = T1
 Theta <- .calcLifeTable(Theta)
 Theta <- .calcSelectivities(Theta)
 Theta <- .calcSRR(Theta)
 Theta <- .calcEquilibrium(Theta)
 TwoSex<- .makeDataFrame(Theta)
+
+T1 <- .calcLifeTable(T1)
+T1 <- .calcSelectivities(T1)
+T1 <- .calcSRR(T1)
+T1 <- .calcEquilibrium(T1)
+OneSex<- .makeDataFrame(T1)
+
+# RBind two data frames
+
+DF <- rbind(TwoSex,OneSex)
 
 
 # |----------------------------------------------------------------------------------|
@@ -411,8 +434,21 @@ TwoSex<- .makeDataFrame(Theta)
 # |----------------------------------------------------------------------------------|
 # |
 
-df.ye <- subset(TwoSex,select=c(fe,ye,grep("ye.s*",ii)))
-mdf   <- melt(df.ye,id.vars=c("fe"))
-p     <- ggplot(mdf,aes(fe,value,color=variable)) + geom_line()
-p     <- p + labs(x="Fishing mortality",y="Equilibrium yeild",color=c("Yield"))
+df.ye <- subset(DF,select=c(fe,ye,msy,Stock))
+mdf   <- melt(df.ye,id.vars=c("fe","Stock"))
+p     <- ggplot(df.ye,aes(fe,ye/msy,color=Stock)) + geom_line()
+p.ye  <- p + labs(x="Fishing mortality",y="Equilibrium yeild relative to MSY",color="Model")
+print(p.ye)
+
+df.spr<- subset(DF,select=c(fe,spr,Stock))
+mdf   <- melt(df.spr,id.vars=c("fe","Stock"))
+p     <- ggplot(mdf,aes(fe,value,color=Stock)) + geom_line() + ylim(c(0,1))
+p     <- p + geom_segment(aes(x=0,y=0.35,xend=0.310,yend=0.35))
+p     <- p + geom_segment(aes(x=0.310,y=0,xend=0.310,yend=0.35))
+p.spr <- p + labs(x="Fishing mortality",y="Female spawning potential ratio",color="Model")
+print(p.spr)
+
+df.ypr<- subset(DF,select=c(fe,ypr,Stock))
+p     <- ggplot(df.ypr,aes(fe,ypr,color=Stock)) + geom_line()
+p     <- p + labs(x="Fishing mortality",y="Yield per recruit",color="Model")
 print(p)
