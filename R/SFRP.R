@@ -19,7 +19,9 @@
 # | LIBRARIES
 # |----------------------------------------------------------------------------------|
 # |
+setwd("/Users/stevenmartell1/Documents/CONSULTING/SummerFlounder/R/")
 require(ggplot2)
+require(reshape2)
 source("Selex.R")
 
 # |----------------------------------------------------------------------------------|
